@@ -1,0 +1,53 @@
+
+[property]
+enable=1
+#Width height used for configuration to which below configs are configured
+config-width=1920
+config-height=1080
+#osd-mode 0: Dont display any lines, rois and text
+#         1: Display only lines, rois and static text i.e. labels
+#         2: Display all info from 1 plus information about counts
+osd-mode=2
+#Set OSD font size that has to be displayed
+display-font-size=12
+
+## Per stream configuration
+[roi-filtering-stream-0]
+#enable or disable following feature
+enable=1
+#ROI to filter select objects, and remove from meta data
+#roi-RF=295;643;579;634;642;913;56;828
+#roi-RF=166;893;118;810;547;698;750;734;981;707;1572;791;1825;866;1633;958;774;984;264;926
+roi-Roundabout=166;893;118;810;547;698;981;707;1572;791;1825;866;1633;958;774;984;264;926
+#remove objects in the ROI
+inverse-roi=0
+class-id=-1
+
+[line-crossing-stream-0]
+enable=1
+#Label;direction;lc
+line-crossing-N-Entry=784;726;793;745;748;742;894;739
+line-crossing-N-Exit=954;728;913;700;862;719;967;709
+line-crossing-NE-Entry=1756;818;1638;818;1572;791;1722;833
+line-crossing-NE-Exit=1732;857;1819;846;1722;834;1825;866
+line-crossing-SE-Entry=1806;915;1745;904;1722;918;1785;891
+line-crossing-SE-Exit=1640;944;1730;952;1633;958;1671;937
+line-crossing-SV-Entry=555;987;680;962;570;960;804;982
+line-crossing-SV-Exit=290;946;252;964;270;933;478;950
+#line-crossing-SV-Exit=345;942;291;963;270;933;478;950
+#line-crossing-SV-Entry1=542;977;621;958;570;960;671;970
+#line-crossing-SV-Entry2=659;985;719;970;672;970;804;982
+#line-crossing-SV-Exit1=300;942;248;963;270;933;339;943
+#line-crossing-SV-Exit2=410;948;351;964;341;943;478;950
+line-crossing-NV-Entry=80;882;155;882;154;861;163;898
+line-crossing-NV-Exit=157;827;94;827;149;844;132;805
+class-id=-1
+#extended when 0- only counts crossing on the configured Line
+#              1- assumes extended Line crossing counts all the crossing
+extended=0
+#LC modes supported:
+#loose   : counts all crossing without strong adherence to direction
+#balanced: Strict direction adherence expected compared to mode=loose
+#strict  : Strict direction adherence expected compared to mode=balanced
+mode=loose
+
