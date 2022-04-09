@@ -5,6 +5,7 @@ endif
 
 BIN=./bin/
 SOURCE=./src/
+INCLUDE=./incl/
 
 APP:= vehicle-tracking-deepstream
 
@@ -20,14 +21,14 @@ endif
 
 SRCS:= $(wildcard $(SOURCE)*.cpp)
 
-INCS:= $(wildcard *.h)
+INCS:= $(wildcard $(INCLUDE)*.h)
 
 PKGS:= gstreamer-1.0
 
 OBJS:= $(SRCS:.cpp=.o)
 
 CFLAGS+= -I/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/sources/includes \
-		-I /usr/local/cuda-$(CUDA_VER)/include
+		-I/usr/local/cuda-$(CUDA_VER)/include -I$(INCLUDE)
 
 CFLAGS+= $(shell pkg-config --cflags $(PKGS))
 

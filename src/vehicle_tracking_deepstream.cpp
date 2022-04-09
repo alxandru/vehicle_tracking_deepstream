@@ -5,24 +5,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <iostream>
-#include <vector>
-#include <unordered_map>
-#include <map>
-#include <sstream>
 #include <cuda_runtime_api.h>
 #include "gstnvdsmeta.h"
-#include "nvds_analytics_meta.h"
-#include "nvdsmeta.h"
+#include "metadata.h"
+
 
 #define PGIE_CONFIG_FILE  "cfg/pgie_config.txt"
-#define MAX_DISPLAY_LEN 64
 
 #define TRACKER_CONFIG_FILE "cfg/tracker_config.txt"
 #define MAX_TRACKING_ID_LEN 16
-
-#define PGIE_CLASS_ID_BUS 0
-#define PGIE_CLASS_ID_CAR 1
 
 /* The muxer output resolution must be set if the input streams will be of
  * different resolution. The muxer will scale all the input frames to this
@@ -34,248 +25,7 @@
  * based on the fastest source's framerate. */
 #define MUXER_BATCH_TIMEOUT_USEC 40000
 
-gint frame_number = 0;
 
-
-typedef struct DisplayInfoTag {
-  std::string roi;
-  std::map<std::string, uint32_t> crossings;
-} DisplayInfo;
-
-
-void set_text(NvOSD_TextParams *txt_params, const int xOffset, const int yOffset, const std::string &display_text) {
-    txt_params->display_text = (char*)g_malloc0 (MAX_DISPLAY_LEN);
-    snprintf(txt_params->display_text, MAX_DISPLAY_LEN, "%s", display_text.c_str());
-
-    // Now set the offsets where the string should appear
-    txt_params->x_offset = xOffset;
-    txt_params->y_offset = yOffset;
-
-    // Font , font-color and font-size
-    txt_params->font_params.font_name = "Serif";
-    txt_params->font_params.font_size = 10;
-    txt_params->font_params.font_color.red = 1.0;
-    txt_params->font_params.font_color.green = 1.0;
-    txt_params->font_params.font_color.blue = 1.0;
-    txt_params->font_params.font_color.alpha = 1.0;
-
-    // Text background color
-    txt_params->set_bg_clr = 1;
-    txt_params->text_bg_clr.red = 0.0;
-    txt_params->text_bg_clr.green = 0.0;
-    txt_params->text_bg_clr.blue = 0.0;
-    txt_params->text_bg_clr.alpha = 1.0; 
-}
-
-void display_info_to_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta * const frame_meta, const DisplayInfo &displayInfo) {
-    NvDsDisplayMeta *display_meta = NULL;
-    int elementsInDisplay = 0;
-    int xOffset = 10;
-    int yOffset = 12;
-    display_meta = nvds_acquire_display_meta_from_pool(batch_meta);
-    display_meta->num_labels = 1 + displayInfo.crossings.size();
-
-    NvOSD_TextParams *txt_params  = &display_meta->text_params[elementsInDisplay++];
-
-    set_text(txt_params, xOffset, yOffset, displayInfo.roi);
-
-    int offsetIdx = 0;
-    std::stringstream out;
-    for (const auto &crossing: displayInfo.crossings) {
-      if (elementsInDisplay >= MAX_ELEMENTS_IN_DISPLAY_META - 1) {
-        nvds_add_display_meta_to_frame(frame_meta, display_meta);
-        return;
-      }
-      
-      out << crossing.first.c_str() << " = " << crossing.second;
-      
-      NvOSD_TextParams *txt_params  = &display_meta->text_params[elementsInDisplay++];
-      if (offsetIdx++ % 2 == 0) {
-        yOffset += 30;
-        xOffset = 10;
-      } else {
-        xOffset += MAX_DISPLAY_LEN + 50;
-      }
-      
-      set_text(txt_params, xOffset, yOffset, out.str());
-      
-      out.str(""); out.clear();
-    }
-
-    nvds_add_display_meta_to_frame(frame_meta, display_meta);
-}
-
-
-/* nvdsanalytics_src_pad_buffer_probe  will extract metadata received on tiler sink pad
- * and extract nvanalytics metadata etc. */
-static GstPadProbeReturn
-nvdsanalytics_src_pad_buffer_probe (GstPad * pad, GstPadProbeInfo * info,
-    gpointer u_data)
-{
-    GstBuffer *buf = (GstBuffer *) info->data;
-    guint num_rects = 0;
-    NvDsObjectMeta *obj_meta = NULL;
-    guint bus_count = 0;
-    guint car_count = 0;
-    NvDsMetaList * l_frame = NULL;
-    NvDsMetaList * l_obj = NULL;
-
-    NvDsBatchMeta *batch_meta = gst_buffer_get_nvds_batch_meta (buf);
-
-    for (l_frame = batch_meta->frame_meta_list; l_frame != NULL;
-      l_frame = l_frame->next) {
-        NvDsFrameMeta *frame_meta = (NvDsFrameMeta *) (l_frame->data);
-        std::stringstream out_string;
-        bus_count = 0;
-        num_rects = 0;
-        car_count = 0;
-        for (l_obj = frame_meta->obj_meta_list; l_obj != NULL;
-                l_obj = l_obj->next) {
-            obj_meta = (NvDsObjectMeta *) (l_obj->data);
-            if (obj_meta->class_id == PGIE_CLASS_ID_BUS) {
-                bus_count++;
-                num_rects++;
-            }
-            if (obj_meta->class_id == PGIE_CLASS_ID_CAR) {
-                car_count++;
-                num_rects++;
-            }
-
-            // Access attached user meta for each object
-            for (NvDsMetaList *l_user_meta = obj_meta->obj_user_meta_list; l_user_meta != NULL;
-                    l_user_meta = l_user_meta->next) {
-                NvDsUserMeta *user_meta = (NvDsUserMeta *) (l_user_meta->data);
-                if(user_meta->base_meta.meta_type == NVDS_USER_OBJ_META_NVDSANALYTICS)
-                {
-                    NvDsAnalyticsObjInfo * user_meta_data = (NvDsAnalyticsObjInfo *)user_meta->user_meta_data;
-                    if (user_meta_data->dirStatus.length()){
-                        g_print ("object %lu moving in %s\n", obj_meta->object_id, user_meta_data->dirStatus.c_str());
-                    }
-                }
-            }
-        }
-        DisplayInfo displayInfo;
-        /* Iterate user metadata in frames to search analytics metadata */
-        for (NvDsMetaList * l_user = frame_meta->frame_user_meta_list;
-                l_user != NULL; l_user = l_user->next) {
-            NvDsUserMeta *user_meta = (NvDsUserMeta *) l_user->data;
-            if (user_meta->base_meta.meta_type != NVDS_USER_FRAME_META_NVDSANALYTICS)
-                continue;
-            /* convert to  metadata */
-            NvDsAnalyticsFrameMeta *meta =
-                (NvDsAnalyticsFrameMeta *) user_meta->user_meta_data;
-            /* Get the labels from nvdsanalytics config file */
-            for (std::pair<std::string, uint32_t> status : meta->objInROIcnt){
-                out_string << "Vehicles in ";
-                out_string << status.first;
-                out_string << " = ";
-                out_string << status.second;
-                displayInfo.roi = out_string.str();
-            }
-            for (std::pair<std::string, uint32_t> status : meta->objLCCumCnt){
-                out_string << " LineCrossing Cumulative ";
-                out_string << status.first;
-                out_string << " = ";
-                out_string << status.second;
-                displayInfo.crossings.insert(status);
-            }
-            for (std::pair<std::string, uint32_t> status : meta->objLCCurrCnt){
-
-                out_string << " LineCrossing Current Frame ";
-                out_string << status.first;
-                out_string << " = ";
-                out_string << status.second;
-            }
-            for (std::pair<std::string, bool> status : meta->ocStatus){
-                out_string << " Overcrowding status ";
-                out_string << status.first;
-                out_string << " = ";
-                out_string << status.second;
-            }
-        }
-        
-        display_info_to_frame(batch_meta, frame_meta, displayInfo);
-        
-        g_print ("Frame Number = %d of Stream = %d, Number of objects = %d "
-                "Bus Count = %d Car Count = %d %s\n",
-            frame_meta->frame_num, frame_meta->pad_index,
-            num_rects, bus_count, car_count, out_string.str().c_str());
-    }
-    return GST_PAD_PROBE_OK;
-}
-
-
-/* This is the buffer probe function that we have registered on the sink pad
- * of the OSD element. All the infer elements in the pipeline shall attach
- * their metadata to the GstBuffer, here we will iterate & process the metadata
- * forex: class ids to strings, counting of class_id objects etc. */
-/*static GstPadProbeReturn
-osd_sink_pad_buffer_probe (GstPad * pad, GstPadProbeInfo * info,
-    gpointer u_data)
-{
-    GstBuffer *buf = (GstBuffer *) info->data;
-    guint num_rects = 0;
-    NvDsObjectMeta *obj_meta = NULL;
-    guint bus_count = 0;
-    guint car_count = 0;
-    NvDsMetaList * l_frame = NULL;
-    NvDsMetaList * l_obj = NULL;
-    NvDsDisplayMeta *display_meta = NULL;
-
-    NvDsBatchMeta *batch_meta = gst_buffer_get_nvds_batch_meta (buf);
-
-    for (l_frame = batch_meta->frame_meta_list; l_frame != NULL;
-      l_frame = l_frame->next) {
-        NvDsFrameMeta *frame_meta = (NvDsFrameMeta *) (l_frame->data);
-        int offset = 0;
-        for (l_obj = frame_meta->obj_meta_list; l_obj != NULL;
-                l_obj = l_obj->next) {
-            obj_meta = (NvDsObjectMeta *) (l_obj->data);
-            if (obj_meta->class_id == PGIE_CLASS_ID_BUS) {
-                bus_count++;
-                num_rects++;
-            }
-            if (obj_meta->class_id == PGIE_CLASS_ID_CAR) {
-                car_count++;
-                num_rects++;
-            }
-        }
-        display_meta = nvds_acquire_display_meta_from_pool(batch_meta);
-        NvOSD_TextParams *txt_params  = &display_meta->text_params[0];
-        display_meta->num_labels = 1;
-        txt_params->display_text = g_malloc0 (MAX_DISPLAY_LEN);
-        offset = snprintf(txt_params->display_text, MAX_DISPLAY_LEN, "Bus = %d ", bus_count);
-        offset = snprintf(txt_params->display_text + offset , MAX_DISPLAY_LEN, "Car = %d ", car_count);
-
-        // Now set the offsets where the string should appear
-        txt_params->x_offset = 10;
-        txt_params->y_offset = 12;
-
-        // Font , font-color and font-size
-        txt_params->font_params.font_name = "Serif";
-        txt_params->font_params.font_size = 10;
-        txt_params->font_params.font_color.red = 1.0;
-        txt_params->font_params.font_color.green = 1.0;
-        txt_params->font_params.font_color.blue = 1.0;
-        txt_params->font_params.font_color.alpha = 1.0;
-
-        // Text background color
-        txt_params->set_bg_clr = 1;
-        txt_params->text_bg_clr.red = 0.0;
-        txt_params->text_bg_clr.green = 0.0;
-        txt_params->text_bg_clr.blue = 0.0;
-        txt_params->text_bg_clr.alpha = 1.0;
-
-        nvds_add_display_meta_to_frame(frame_meta, display_meta);
-    }
-
-    g_print ("Frame Number = %d Number of objects = %d "
-            "Bus Count = %d Car Count = %d\n",
-            frame_number, num_rects, bus_count, car_count);
-    frame_number++;
-    return GST_PAD_PROBE_OK;
-}
-*/
 static gboolean
 bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -683,7 +433,7 @@ main (int argc, char *argv[])
     g_print ("Unable to get src pad\n");
   else
     gst_pad_add_probe (nvdsanalytics_src_pad, GST_PAD_PROBE_TYPE_BUFFER,
-        nvdsanalytics_src_pad_buffer_probe, NULL, NULL);
+        metadata::nvdsanalyticsSrcPadBufferProbe, NULL, NULL);
   gst_object_unref (nvdsanalytics_src_pad);
 
   /* Set the pipeline to "playing" state */
