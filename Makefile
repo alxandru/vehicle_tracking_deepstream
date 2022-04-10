@@ -7,6 +7,8 @@ BIN=./bin/
 SOURCE=./src/
 INCLUDE=./incl/
 
+$(info $(shell mkdir -p $(BIN)))
+
 APP:= vehicle-tracking-deepstream
 
 TARGET_DEVICE = $(shell gcc -dumpmachine | cut -f1 -d -)
