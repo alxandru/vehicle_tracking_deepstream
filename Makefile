@@ -34,7 +34,7 @@ CFLAGS+= $(shell pkg-config --cflags $(PKGS))
 
 LIBS:= $(shell pkg-config --libs $(PKGS))
 
-LIBS+= -L/usr/local/cuda-$(CUDA_VER)/lib64/ -lcudart \
+LIBS+= -L/usr/local/cuda-$(CUDA_VER)/lib64/ -lcudart -lstdc++fs\
 		-L$(LIB_INSTALL_DIR) -lnvdsgst_meta -lnvds_meta \
 		-Wl,-rpath,$(LIB_INSTALL_DIR)
 

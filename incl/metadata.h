@@ -3,8 +3,6 @@
 #define __VEHICLE_METADATA__
 
 #include <gst/gst.h>
-#include <glib.h>
-
 
 namespace metadata {
 

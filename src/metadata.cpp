@@ -1,9 +1,10 @@
-#include "metadata.h"
+#include <glib.h>
 #include <iostream>
 #include <vector>
 #include <unordered_map>
 #include <map>
 #include <sstream>
+#include "metadata.h"
 #include "gstnvdsmeta.h"
 #include "nvds_analytics_meta.h"
 #include "nvdsmeta.h"
@@ -13,6 +14,7 @@ namespace {
 constexpr auto MAX_DISPLAY_LEN = 64;
 constexpr auto PGIE_CLASS_ID_BUS = 0;
 constexpr auto PGIE_CLASS_ID_CAR = 1;
+constexpr auto FONT = "Serif";
 
 struct DisplayInfo {
   std::string roi;
@@ -28,7 +30,7 @@ void setText(NvOSD_TextParams *txt_params, const int xOffset, const int yOffset,
     txt_params->x_offset = xOffset;
     txt_params->y_offset = yOffset;
     // Font , font-color and font-size
-    txt_params->font_params.font_name = "Serif";
+    txt_params->font_params.font_name = const_cast<char*>(FONT);
     txt_params->font_params.font_size = 10;
     txt_params->font_params.font_color.red = 1.0;
     txt_params->font_params.font_color.green = 1.0;
@@ -43,7 +45,7 @@ void setText(NvOSD_TextParams *txt_params, const int xOffset, const int yOffset,
 }
 
 void displayInfoToFrame(NvDsBatchMeta *batch_meta, NvDsFrameMeta * const frame_meta, const display_info_t &displayInfo) {
-    NvDsDisplayMeta *display_meta = NULL;
+    NvDsDisplayMeta *display_meta = nullptr;
     int elementsInDisplay = 0;
     int xOffset = 10;
     int yOffset = 12;
@@ -88,22 +90,22 @@ nvdsanalyticsSrcPadBufferProbe (GstPad * pad, GstPadProbeInfo * info, gpointer u
 {
     GstBuffer *buf = (GstBuffer *) info->data;
     guint num_rects = 0;
-    NvDsObjectMeta *obj_meta = NULL;
+    NvDsObjectMeta *obj_meta = nullptr;
     guint bus_count = 0;
     guint car_count = 0;
-    NvDsMetaList * l_frame = NULL;
-    NvDsMetaList * l_obj = NULL;
+    NvDsMetaList * l_frame = nullptr;
+    NvDsMetaList * l_obj = nullptr;
 
     NvDsBatchMeta *batch_meta = gst_buffer_get_nvds_batch_meta (buf);
 
-    for (l_frame = batch_meta->frame_meta_list; l_frame != NULL;
+    for (l_frame = batch_meta->frame_meta_list; l_frame != nullptr;
       l_frame = l_frame->next) {
         NvDsFrameMeta *frame_meta = (NvDsFrameMeta *) (l_frame->data);
         std::stringstream out_string;
         bus_count = 0;
         num_rects = 0;
         car_count = 0;
-        for (l_obj = frame_meta->obj_meta_list; l_obj != NULL;
+        for (l_obj = frame_meta->obj_meta_list; l_obj != nullptr;
                 l_obj = l_obj->next) {
             obj_meta = (NvDsObjectMeta *) (l_obj->data);
             if (obj_meta->class_id == PGIE_CLASS_ID_BUS) {
@@ -116,7 +118,7 @@ nvdsanalyticsSrcPadBufferProbe (GstPad * pad, GstPadProbeInfo * info, gpointer u
             }
 
             // Access attached user meta for each object
-            for (NvDsMetaList *l_user_meta = obj_meta->obj_user_meta_list; l_user_meta != NULL;
+            for (NvDsMetaList *l_user_meta = obj_meta->obj_user_meta_list; l_user_meta != nullptr;
                     l_user_meta = l_user_meta->next) {
                 NvDsUserMeta *user_meta = (NvDsUserMeta *) (l_user_meta->data);
                 if(user_meta->base_meta.meta_type == NVDS_USER_OBJ_META_NVDSANALYTICS)
@@ -131,7 +133,7 @@ nvdsanalyticsSrcPadBufferProbe (GstPad * pad, GstPadProbeInfo * info, gpointer u
         display_info_t displayInfo;
         /* Iterate user metadata in frames to search analytics metadata */
         for (NvDsMetaList * l_user = frame_meta->frame_user_meta_list;
-                l_user != NULL; l_user = l_user->next) {
+                l_user != nullptr; l_user = l_user->next) {
             NvDsUserMeta *user_meta = (NvDsUserMeta *) l_user->data;
             if (user_meta->base_meta.meta_type != NVDS_USER_FRAME_META_NVDSANALYTICS)
                 continue;
@@ -170,10 +172,8 @@ nvdsanalyticsSrcPadBufferProbe (GstPad * pad, GstPadProbeInfo * info, gpointer u
         
         displayInfoToFrame(batch_meta, frame_meta, displayInfo);
         
-        g_print ("Frame Number = %d of Stream = %d, Number of objects = %d "
-                "Bus Count = %d Car Count = %d %s\n",
-            frame_meta->frame_num, frame_meta->pad_index,
-            num_rects, bus_count, car_count, out_string.str().c_str());
+        std::cout << "Frame Number = " << frame_meta->frame_num << " of Stream = " << frame_meta->pad_index << ", Number of objects = " << num_rects <<
+                " Bus Count = " << bus_count << " Car Count = " << car_count << " " << out_string.str().c_str() << std::endl;
     }
     return GST_PAD_PROBE_OK;
 }

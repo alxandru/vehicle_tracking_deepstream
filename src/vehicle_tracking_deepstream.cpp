@@ -8,12 +8,10 @@
 #include <cuda_runtime_api.h>
 #include "gstnvdsmeta.h"
 #include "metadata.h"
+#include "trackerparsing.h"
 
 
 #define PGIE_CONFIG_FILE  "cfg/pgie_config.txt"
-
-#define TRACKER_CONFIG_FILE "cfg/tracker_config.txt"
-#define MAX_TRACKING_ID_LEN 16
 
 /* The muxer output resolution must be set if the input streams will be of
  * different resolution. The muxer will scale all the input frames to this
@@ -52,131 +50,6 @@ bus_call (GstBus * bus, GstMessage * msg, gpointer data)
       break;
   }
   return TRUE;
-}
-
-/* Tracker config parsing */
-
-#define CHECK_ERROR(error) \
-    if (error) { \
-        g_printerr ("Error while parsing config file: %s\n", error->message); \
-        goto done; \
-    }
-
-#define CONFIG_GROUP_TRACKER "tracker"
-#define CONFIG_GROUP_TRACKER_WIDTH "tracker-width"
-#define CONFIG_GROUP_TRACKER_HEIGHT "tracker-height"
-#define CONFIG_GROUP_TRACKER_LL_CONFIG_FILE "ll-config-file"
-#define CONFIG_GROUP_TRACKER_LL_LIB_FILE "ll-lib-file"
-#define CONFIG_GROUP_TRACKER_ENABLE_BATCH_PROCESS "enable-batch-process"
-#define CONFIG_GPU_ID "gpu-id"
-
-static gchar *
-get_absolute_file_path (gchar *cfg_file_path, gchar *file_path)
-{
-  gchar abs_cfg_path[PATH_MAX + 1];
-  gchar *abs_file_path;
-  gchar *delim;
-
-  if (file_path && file_path[0] == '/') {
-    return file_path;
-  }
-
-  if (!realpath (cfg_file_path, abs_cfg_path)) {
-    g_free (file_path);
-    return NULL;
-  }
-
-  // Return absolute path of config file if file_path is NULL.
-  if (!file_path) {
-    abs_file_path = g_strdup (abs_cfg_path);
-    return abs_file_path;
-  }
-
-  delim = g_strrstr (abs_cfg_path, "/");
-  *(delim + 1) = '\0';
-
-  abs_file_path = g_strconcat (abs_cfg_path, file_path, NULL);
-  g_free (file_path);
-
-  return abs_file_path;
-}
-
-static gboolean
-set_tracker_properties (GstElement *nvtracker)
-{
-  gboolean ret = FALSE;
-  GError *error = NULL;
-  gchar **keys = NULL;
-  gchar **key = NULL;
-  GKeyFile *key_file = g_key_file_new ();
-
-  if (!g_key_file_load_from_file (key_file, TRACKER_CONFIG_FILE, G_KEY_FILE_NONE,
-          &error)) {
-    g_printerr ("Failed to load config file: %s\n", error->message);
-    return FALSE;
-  }
-
-  keys = g_key_file_get_keys (key_file, CONFIG_GROUP_TRACKER, NULL, &error);
-  CHECK_ERROR (error);
-
-  for (key = keys; *key; key++) {
-    if (!g_strcmp0 (*key, CONFIG_GROUP_TRACKER_WIDTH)) {
-      gint width =
-          g_key_file_get_integer (key_file, CONFIG_GROUP_TRACKER,
-          CONFIG_GROUP_TRACKER_WIDTH, &error);
-      CHECK_ERROR (error);
-      g_object_set (G_OBJECT (nvtracker), "tracker-width", width, NULL);
-    } else if (!g_strcmp0 (*key, CONFIG_GROUP_TRACKER_HEIGHT)) {
-      gint height =
-          g_key_file_get_integer (key_file, CONFIG_GROUP_TRACKER,
-          CONFIG_GROUP_TRACKER_HEIGHT, &error);
-      CHECK_ERROR (error);
-      g_object_set (G_OBJECT (nvtracker), "tracker-height", height, NULL);
-    } else if (!g_strcmp0 (*key, CONFIG_GPU_ID)) {
-      guint gpu_id =
-          g_key_file_get_integer (key_file, CONFIG_GROUP_TRACKER,
-          CONFIG_GPU_ID, &error);
-      CHECK_ERROR (error);
-      g_object_set (G_OBJECT (nvtracker), "gpu_id", gpu_id, NULL);
-    } else if (!g_strcmp0 (*key, CONFIG_GROUP_TRACKER_LL_CONFIG_FILE)) {
-      char* ll_config_file = get_absolute_file_path (TRACKER_CONFIG_FILE,
-                g_key_file_get_string (key_file,
-                    CONFIG_GROUP_TRACKER,
-                    CONFIG_GROUP_TRACKER_LL_CONFIG_FILE, &error));
-      CHECK_ERROR (error);
-      g_object_set (G_OBJECT (nvtracker), "ll-config-file", ll_config_file, NULL);
-    } else if (!g_strcmp0 (*key, CONFIG_GROUP_TRACKER_LL_LIB_FILE)) {
-      char* ll_lib_file = get_absolute_file_path (TRACKER_CONFIG_FILE,
-                g_key_file_get_string (key_file,
-                    CONFIG_GROUP_TRACKER,
-                    CONFIG_GROUP_TRACKER_LL_LIB_FILE, &error));
-      CHECK_ERROR (error);
-      g_object_set (G_OBJECT (nvtracker), "ll-lib-file", ll_lib_file, NULL);
-    } else if (!g_strcmp0 (*key, CONFIG_GROUP_TRACKER_ENABLE_BATCH_PROCESS)) {
-      gboolean enable_batch_process =
-          g_key_file_get_integer (key_file, CONFIG_GROUP_TRACKER,
-          CONFIG_GROUP_TRACKER_ENABLE_BATCH_PROCESS, &error);
-      CHECK_ERROR (error);
-      g_object_set (G_OBJECT (nvtracker), "enable_batch_process",
-                    enable_batch_process, NULL);
-    } else {
-      g_printerr ("Unknown key '%s' for group [%s]", *key,
-          CONFIG_GROUP_TRACKER);
-    }
-  }
-
-  ret = TRUE;
-done:
-  if (error) {
-    g_error_free (error);
-  }
-  if (keys) {
-    g_strfreev (keys);
-  }
-  if (!ret) {
-    g_printerr ("%s failed", __func__);
-  }
-  return ret;
 }
 
 int
@@ -334,7 +207,7 @@ main (int argc, char *argv[])
   g_object_set (G_OBJECT (pgie), "config-file-path", PGIE_CONFIG_FILE, NULL);
 
   /* Set necessary properties of the tracker element. */
-  if (!set_tracker_properties(nvtracker)) {
+  if (! ::trackerparsing::setTrackerProperties(nvtracker)) {
     g_printerr ("Failed to set tracker properties. Exiting.\n");
     return -1;
   }
@@ -433,7 +306,7 @@ main (int argc, char *argv[])
     g_print ("Unable to get src pad\n");
   else
     gst_pad_add_probe (nvdsanalytics_src_pad, GST_PAD_PROBE_TYPE_BUFFER,
-        metadata::nvdsanalyticsSrcPadBufferProbe, NULL, NULL);
+        ::metadata::nvdsanalyticsSrcPadBufferProbe, NULL, NULL);
   gst_object_unref (nvdsanalytics_src_pad);
 
   /* Set the pipeline to "playing" state */
