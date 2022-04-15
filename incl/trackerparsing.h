@@ -6,7 +6,7 @@
 
 namespace trackerparsing {
 
-bool setTrackerProperties (GstElement *nvtracker);
+bool setTrackerProperties (GstElement *);
 
 } // namespace trackerparsing
 

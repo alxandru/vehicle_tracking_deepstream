@@ -6,7 +6,6 @@
 
 namespace {
 constexpr auto TRACKER_CONFIG_FILE = "cfg/tracker_config.txt";
-//constexpr auto MAX_TRACKING_ID_LEN = 16;
 constexpr auto CONFIG_GROUP_TRACKER = "tracker";
 constexpr auto CONFIG_GROUP_TRACKER_WIDTH = "tracker-width";
 constexpr auto CONFIG_GROUP_TRACKER_HEIGHT = "tracker-height";
