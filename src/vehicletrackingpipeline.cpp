@@ -254,4 +254,8 @@ void VehicleTrackingPipeline::cleanup() {
   mCleanup = true;
 }
 
+void VehicleTrackingPipeline::printCrossings() {
+  metadata::printCrossingsMatrix();
+}
+
 } // namespace vehicletracking

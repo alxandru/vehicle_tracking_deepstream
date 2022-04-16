@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
     return ret;
   }
   vtp.run();
+  vtp.printCrossings();
 
   return 0;
 }

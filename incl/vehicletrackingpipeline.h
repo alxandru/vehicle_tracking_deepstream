@@ -45,6 +45,7 @@ class VehicleTrackingPipeline final {
 
   std::uint8_t initialize(const buscb_t);
   void run();
+  void printCrossings();
  
  private:
   void cleanup();

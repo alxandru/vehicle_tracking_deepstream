@@ -7,6 +7,7 @@
 namespace metadata {
 
 GstPadProbeReturn nvdsanalyticsSrcPadBufferProbe (GstPad *, GstPadProbeInfo *, gpointer);
+void printCrossingsMatrix();
 
 } // namespace metadata
 
