@@ -1,6 +1,7 @@
 #include <glib.h>
 #include <experimental/filesystem>
 #include <iostream>
+#include <string>
 
 #include "trackerparsing.h"
 
@@ -17,15 +18,15 @@ constexpr auto CONFIG_GPU_ID = "gpu-id";
 namespace fs = std::experimental::filesystem;
 
 #define CHECK_ERROR(error) \
-    if (error) { \
-        std::cerr << "Error while parsing config file: " << error->message << std::endl; \
-        goto done; \
-    }
+  if (error) { \
+    std::cerr << "Error while parsing config file: " << error->message << std::endl; \
+    goto done; \
+  }
 
-char* getAbsoluteFilePath(const char *cfgFilePath, char *filePath)
+std::string getAbsoluteFilePath(const char *cfgFilePath, char *filePath)
 {
   if (nullptr != filePath && filePath[0] == '/') {
-    return filePath;
+    return std::string(filePath);
   }
   auto cfgPath = fs::path(cfgFilePath);
   fs::path absCfgPath;
@@ -35,16 +36,16 @@ char* getAbsoluteFilePath(const char *cfgFilePath, char *filePath)
     std::cerr << "Canonical path for " << cfgPath << " threw exception:\n"
                   << ex.what() << '\n';
     g_free (filePath);
-    return nullptr;
+    return std::string();
   }
   if (nullptr == filePath) {
-    return const_cast<char*>(absCfgPath.c_str());
+    return absCfgPath.string();
   }
   auto absFilePath = absCfgPath.parent_path() / filePath;
   if (!fs::exists(absFilePath)) {
-    return nullptr;
+    return std::string();
   }
-  return const_cast<char*>(absFilePath.c_str());
+  return absFilePath.string();
 }
 
 } // namespace
@@ -87,19 +88,19 @@ bool setTrackerProperties (GstElement *nvtracker)
       CHECK_ERROR (error);
       g_object_set (G_OBJECT (nvtracker), CONFIG_GPU_ID, gpu_id, nullptr);
     } else if (!g_strcmp0 (*key, CONFIG_GROUP_TRACKER_LL_CONFIG_FILE)) {
-      char* ll_config_file = ::getAbsoluteFilePath (TRACKER_CONFIG_FILE,
+      std::string ll_config_file = ::getAbsoluteFilePath(TRACKER_CONFIG_FILE,
                 g_key_file_get_string (key_file,
                     CONFIG_GROUP_TRACKER,
                     CONFIG_GROUP_TRACKER_LL_CONFIG_FILE, &error));
       CHECK_ERROR (error);
-      g_object_set (G_OBJECT (nvtracker), CONFIG_GROUP_TRACKER_LL_CONFIG_FILE, ll_config_file, nullptr);
+      g_object_set (G_OBJECT (nvtracker), CONFIG_GROUP_TRACKER_LL_CONFIG_FILE, ll_config_file.c_str(), nullptr);
     } else if (!g_strcmp0 (*key, CONFIG_GROUP_TRACKER_LL_LIB_FILE)) {
-      char* ll_lib_file = ::getAbsoluteFilePath (TRACKER_CONFIG_FILE,
+      std::string ll_lib_file = ::getAbsoluteFilePath(TRACKER_CONFIG_FILE,
                 g_key_file_get_string (key_file,
                     CONFIG_GROUP_TRACKER,
                     CONFIG_GROUP_TRACKER_LL_LIB_FILE, &error));
       CHECK_ERROR (error);
-      g_object_set (G_OBJECT (nvtracker), CONFIG_GROUP_TRACKER_LL_LIB_FILE, ll_lib_file, nullptr);
+      g_object_set (G_OBJECT (nvtracker), CONFIG_GROUP_TRACKER_LL_LIB_FILE, ll_lib_file.c_str(), nullptr);
     } else if (!g_strcmp0 (*key, CONFIG_GROUP_TRACKER_ENABLE_BATCH_PROCESS)) {
       gboolean enable_batch_process =
           g_key_file_get_integer (key_file, CONFIG_GROUP_TRACKER,
