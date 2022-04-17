@@ -31,6 +31,7 @@ constexpr auto ELEMENT_ENCODER_NVV4L2H264 = "nvv4l2h264enc";
 constexpr auto ELEMENT_MUX_MP4 = "mp4mux";
 constexpr auto ELEMENT_QUEUE = "queue";
 constexpr auto ELEMENT_SINK_FILE = "filesink";
+constexpr auto ELEMENT_SINK_FPS_DISPLAY = "fpsdisplaysink";
 
 constexpr auto ELEMENT_NAME_SOURCE_FILE = "file-source";
 constexpr auto ELEMENT_NAME_PARSE_H264 = "h264-parser";
@@ -47,6 +48,7 @@ constexpr auto ELEMENT_NAME_ENCODER_NVV4L2H264 = "encoder";
 constexpr auto ELEMENT_NAME_PARSE_H264_CODEC = "h264-parser-codec";
 constexpr auto ELEMENT_NAME_MUX_MP4 = "mux";
 constexpr auto ELEMENT_NAME_SINK_FILE = "filesink";
+constexpr auto ELEMENT_NAME_SINK_FPS_DISPLAY = "fps-display";
 
 constexpr auto PAD_NAME_SINK = "sink_0";
 constexpr auto PAD_NAME_SRC = "src";
@@ -179,6 +181,13 @@ std::uint8_t VehicleTrackingPipeline::initialize(const buscb_t busCall) {
     return ERR_INITIALIZE_SINK;
   }
   g_object_set(G_OBJECT (sink), "location", mArgv[2], NULL);
+
+  GstElement *fpsSink = nullptr;
+  fpsSink = gst_element_factory_make (ELEMENT_SINK_FPS_DISPLAY, ELEMENT_NAME_SINK_FPS_DISPLAY);
+  if (nullptr == fpsSink) {
+    return ERR_INITIALIZE_FPS_SINK;
+  }
+  g_object_set (G_OBJECT (fpsSink), "text-overlay", FALSE, "video-sink", sink, "sync", FALSE, NULL);
   
   std::array<GstElement*, NUMBER_QUEUES> queues{
     {gst_element_factory_make (ELEMENT_QUEUE, "queue1"),
@@ -190,7 +199,7 @@ std::uint8_t VehicleTrackingPipeline::initialize(const buscb_t busCall) {
 
   gst_bin_add_many (GST_BIN (mPipeline),
     source, h264parser, decoder, streammux, queues[0], pgie, queues[1], nvtracker, queues[2], nvdsanalytics, queues[3],
-    nvvidconv, queues[4], nvosd, queues[5], nvvidconv_postosd, cap_filter, encoder, codecparse, mux, sink, nullptr);
+    nvvidconv, queues[4], nvosd, queues[5], nvvidconv_postosd, cap_filter, encoder, codecparse, mux, fpsSink, nullptr);
 
   this->addMessageHandler(busCall);
 
@@ -214,7 +223,7 @@ std::uint8_t VehicleTrackingPipeline::initialize(const buscb_t busCall) {
     return ERR_LINK_SRC_PARSER_DECODER;
   }
   if (!gst_element_link_many (streammux, queues[0], pgie, queues[1], nvtracker, queues[2], nvdsanalytics, queues[3],
-    nvvidconv, queues[4], nvosd, queues[5], nvvidconv_postosd, cap_filter, encoder, codecparse, mux, sink, nullptr)) {
+    nvvidconv, queues[4], nvosd, queues[5], nvvidconv_postosd, cap_filter, encoder, codecparse, mux, fpsSink, nullptr)) {
     return ERR_LINK_ALL;
   }
   
@@ -224,7 +233,7 @@ std::uint8_t VehicleTrackingPipeline::initialize(const buscb_t busCall) {
     return ERR_ADD_ANALYTICS_SRC_PAD;
   }
   gst_pad_add_probe (nvdsanalytics_src_pad, GST_PAD_PROBE_TYPE_BUFFER,
-    ::metadata::nvdsanalyticsSrcPadBufferProbe, NULL, NULL);
+    ::metadata::nvdsanalyticsSrcPadBufferProbe, (gpointer)fpsSink, NULL);
   gst_object_unref (nvdsanalytics_src_pad);
 
   return ERR_SUCCESS;

@@ -10,7 +10,7 @@
 
 namespace {
 
-constexpr auto MAX_DISPLAY_LEN = 64;
+constexpr auto MAX_DISPLAY_LEN = 70;
 constexpr auto PGIE_CLASS_ID_BUS = 0;
 constexpr auto PGIE_CLASS_ID_CAR = 1;
 constexpr auto FONT_SERIF = "Serif";
@@ -67,11 +67,15 @@ void displayInfoToFrame(NvDsBatchMeta *batch_meta, NvDsFrameMeta * const frame_m
   int xOffset = 10;
   int yOffset = 12;
   display_meta = nvds_acquire_display_meta_from_pool(batch_meta);
-  display_meta->num_labels = 1 + displayInfo.crossings.size();
+  display_meta->num_labels = 2 + displayInfo.crossings.size();
 
-  NvOSD_TextParams *txt_params  = &display_meta->text_params[elementsInDisplay++];
+  NvOSD_TextParams *txt_params_fps  = &display_meta->text_params[elementsInDisplay++];
+  setText(txt_params_fps, xOffset, yOffset, displayInfo.fps);
 
-  setText(txt_params, xOffset, yOffset, displayInfo.roi);
+  yOffset += 30;
+  xOffset = 10;
+  NvOSD_TextParams *txt_params_roi  = &display_meta->text_params[elementsInDisplay++];
+  setText(txt_params_roi, xOffset, yOffset, displayInfo.roi);
 
   int offsetIdx = 0;
   std::stringstream out;
@@ -145,6 +149,9 @@ nvdsanalyticsSrcPadBufferProbe (GstPad * pad, GstPadProbeInfo * info, gpointer u
   NvDsMetaList * l_frame = nullptr;
   NvDsMetaList * l_obj = nullptr;
 
+  gchar *fpsMsg = nullptr;
+  g_object_get (G_OBJECT (u_data), "last-message", &fpsMsg, NULL);
+
   NvDsBatchMeta *batch_meta = gst_buffer_get_nvds_batch_meta (buf);
 
   for (l_frame = batch_meta->frame_meta_list; l_frame != nullptr;
@@ -184,6 +191,9 @@ nvdsanalyticsSrcPadBufferProbe (GstPad * pad, GstPadProbeInfo * info, gpointer u
         }
     }
     display_info_t displayInfo;
+    if (fpsMsg != nullptr) {
+      displayInfo.fps += std::string(fpsMsg);
+    }
     std::stringstream out_string;
     /* Iterate user metadata in frames to search analytics metadata */
     for (NvDsMetaList * l_user = frame_meta->frame_user_meta_list; l_user != nullptr; l_user = l_user->next) {

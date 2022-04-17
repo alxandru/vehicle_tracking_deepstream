@@ -25,9 +25,11 @@ using pipeline_t = GstElement *;
 
 namespace metadata {
 struct DisplayInfo {
+  std::string fps{"FPS Info: "};
   std::string roi;
   std::map<std::string, std::uint32_t> crossings;
 };
+
 using display_info_t = struct DisplayInfo;
 
 using crossing_t = std::array<std::uint16_t, N>;

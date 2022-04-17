@@ -26,13 +26,14 @@ constexpr auto ERR_INITIALIZE_ENCODER = 14;
 constexpr auto ERR_INITIALIZE_CODECPARSE = 15;
 constexpr auto ERR_INITIALIZE_MUX = 16;
 constexpr auto ERR_INITIALIZE_SINK = 17;
-constexpr auto ERR_ADD_SINK_PAD = 18;
-constexpr auto ERR_ADD_SRC_PAD = 19;
-constexpr auto ERR_ADD_ANALYTICS_SRC_PAD = 20;
+constexpr auto ERR_INITIALIZE_FPS_SINK = 18;
+constexpr auto ERR_ADD_SINK_PAD = 19;
+constexpr auto ERR_ADD_SRC_PAD = 20;
+constexpr auto ERR_ADD_ANALYTICS_SRC_PAD = 21;
 constexpr auto ERR_LINK_DECODER_STREAMMUXER = 22;
-constexpr auto ERR_SET_PROPERTIES_NVTRACKER = 22;
-constexpr auto ERR_LINK_SRC_PARSER_DECODER = 23;
-constexpr auto ERR_LINK_ALL = 24;
+constexpr auto ERR_SET_PROPERTIES_NVTRACKER = 23;
+constexpr auto ERR_LINK_SRC_PARSER_DECODER = 24;
+constexpr auto ERR_LINK_ALL = 25;
 
 class VehicleTrackingPipeline final {
  public:
