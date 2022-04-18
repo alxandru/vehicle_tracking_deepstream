@@ -30,14 +30,15 @@ PKGS:= gstreamer-1.0
 OBJS:= $(SRCS:.cpp=.o)
 
 CFLAGS+= -I/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/sources/includes \
-		-I/usr/local/cuda-$(CUDA_VER)/include -I$(INCLUDE)
+		-I/usr/local/cuda-$(CUDA_VER)/include -I/usr/local/include/librdkafka \
+		-I$(INCLUDE)
 
 CFLAGS+= $(shell pkg-config --cflags $(PKGS))
 
 LIBS:= $(shell pkg-config --libs $(PKGS))
 
 LIBS+= -L/usr/local/cuda-$(CUDA_VER)/lib64/ -lcudart -lstdc++fs\
-		-L$(LIB_INSTALL_DIR) -lnvdsgst_meta -lnvds_meta \
+		-L$(LIB_INSTALL_DIR) -lnvdsgst_meta -lnvds_meta -lrdkafka++ -lrdkafka \
 		-Wl,-rpath,$(LIB_INSTALL_DIR)
 
 all: $(BIN)$(APP)
@@ -51,7 +52,11 @@ $(BIN)$(APP): $(OBJS) Makefile
 clean:
 	rm -rf $(OBJS) $(BIN)$(APP)
 	$(MAKE) -C 3pp/DeepStream-Yolo/nvdsinfer_custom_impl_Yolo clean
+	$(MAKE) -C 3pp/librdkafka clean
 
 subsystem:
 	$(MAKE) -C 3pp/DeepStream-Yolo/nvdsinfer_custom_impl_Yolo
+	$(MAKE) -C 3pp/librdkafka
 
+install:
+	$(MAKE) -C 3pp/librdkafka install

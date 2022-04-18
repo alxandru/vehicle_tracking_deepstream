@@ -4,6 +4,8 @@
 #include <glib.h>
 #include <gst/gst.h>
 #include <cstdint>
+#include "experimental/optional"
+#include "kafkaproducer.h"
 #include "types.h"
 
 namespace vehicletracking {
@@ -34,17 +36,17 @@ constexpr auto ERR_LINK_DECODER_STREAMMUXER = 22;
 constexpr auto ERR_SET_PROPERTIES_NVTRACKER = 23;
 constexpr auto ERR_LINK_SRC_PARSER_DECODER = 24;
 constexpr auto ERR_LINK_ALL = 25;
+constexpr auto ERR_INITIALIZE_PRODUCER = 25;
 
 class VehicleTrackingPipeline final {
  public:
-  using buscb_t = gboolean(*)(GstBus *, GstMessage *, gpointer);
   VehicleTrackingPipeline() = delete;
-  VehicleTrackingPipeline(const arg_count_t, arg_var_t);
+  explicit VehicleTrackingPipeline(const arg_count_t, arg_var_t, const ::kafkaproducer::kafka_info_t &);
   VehicleTrackingPipeline(const VehicleTrackingPipeline &) = default;
   VehicleTrackingPipeline(VehicleTrackingPipeline &&) = default;
   ~VehicleTrackingPipeline();
 
-  std::uint8_t initialize(const buscb_t);
+  std::uint8_t initialize(const buscb_t, const ::kafkaproducer::kafkacb_t &);
   void run();
   void printCrossings();
  
@@ -57,6 +59,8 @@ class VehicleTrackingPipeline final {
   pipeline_t mPipeline;
   bus_id_t mBusWatchId;
   bool mCleanup;
+  ::kafkaproducer::kafka_info_t mKafkaInfo;
+  std::experimental::optional<::kafkaproducer::KafkaProducer> mProducer;
   arg_var_t mArgv;
 };
 

@@ -2,6 +2,7 @@
 
 #include <string>
 #include <array>
+#include <iostream>
 
 #include "trackerparsing.h"
 #include "metadata.h"
@@ -59,12 +60,15 @@ namespace vehicletracking{
 
 VehicleTrackingPipeline::VehicleTrackingPipeline(
     const arg_count_t argc,
-    arg_var_t argv)
+    arg_var_t argv,
+    const ::kafkaproducer::kafka_info_t &kafkaInfo)
     : mArgc{argc},
       mLoop{nullptr},
       mPipeline{nullptr},
       mBusWatchId{0},
       mCleanup{false},
+      mKafkaInfo{kafkaInfo},
+      mProducer{std::experimental::nullopt},
       mArgv{argv} {}
 
 VehicleTrackingPipeline::~VehicleTrackingPipeline() {
@@ -73,7 +77,8 @@ VehicleTrackingPipeline::~VehicleTrackingPipeline() {
   }
 }
 
-std::uint8_t VehicleTrackingPipeline::initialize(const buscb_t busCall) {
+std::uint8_t VehicleTrackingPipeline::initialize(const buscb_t busCall,
+  const ::kafkaproducer::kafkacb_t &kafkaCall) {
   gst_init (&mArgc, &mArgv);
   mLoop = g_main_loop_new (nullptr, FALSE);
   if (nullptr == mLoop) {
@@ -235,6 +240,13 @@ std::uint8_t VehicleTrackingPipeline::initialize(const buscb_t busCall) {
   gst_pad_add_probe (nvdsanalytics_src_pad, GST_PAD_PROBE_TYPE_BUFFER,
     ::metadata::nvdsanalyticsSrcPadBufferProbe, (gpointer)fpsSink, NULL);
   gst_object_unref (nvdsanalytics_src_pad);
+
+  try {
+    mProducer.emplace(mKafkaInfo.mEndpoint, mKafkaInfo.mTopic, kafkaCall);
+  } catch (const std::exception &ex) {
+    std::cerr << "Unable to create kafka producer: " << ex.what() << std::endl;
+    return ERR_INITIALIZE_PRODUCER;
+  }
 
   return ERR_SUCCESS;
 }

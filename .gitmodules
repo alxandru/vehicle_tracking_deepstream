@@ -1,3 +1,6 @@
 [submodule "3pp/DeepStream-Yolo"]
 	path = 3pp/DeepStream-Yolo
 	url = https://github.com/marcoslucianops/DeepStream-Yolo.git
+[submodule "3pp/librdkafka"]
+	path = 3pp/librdkafka
+	url = https://github.com/edenhill/librdkafka.git
