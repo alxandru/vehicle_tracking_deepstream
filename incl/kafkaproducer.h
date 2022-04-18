@@ -45,6 +45,9 @@ class KafkaProducer final {
    public:
     EventCb() = delete;
     EventCb(const kafkacb_t &kafkaCb) : mKafkaCb{kafkaCb} {}
+    EventCb(const EventCb &) = default;
+    EventCb(EventCb &&) = default;
+    ~EventCb() = default;
     inline void event_cb(RdKafka::Event &event) { mKafkaCb(event); }
    private:
     kafkacb_t mKafkaCb;
