@@ -2,7 +2,8 @@
 
 #include <string>
 #include <array>
-#include <iostream>
+#include <utility>
+#include <memory>
 
 #include "trackerparsing.h"
 #include "metadata.h"
@@ -68,13 +69,13 @@ VehicleTrackingPipeline::VehicleTrackingPipeline(
       mBusWatchId{0},
       mCleanup{false},
       mKafkaInfo{kafkaInfo},
-      mProducer{std::experimental::nullopt},
       mArgv{argv} {}
 
 VehicleTrackingPipeline::~VehicleTrackingPipeline() {
   if (!mCleanup) {
     this->cleanup();
   }
+  mProducer.reset();
 }
 
 std::uint8_t VehicleTrackingPipeline::initialize(const buscb_t busCall,
@@ -237,17 +238,18 @@ std::uint8_t VehicleTrackingPipeline::initialize(const buscb_t busCall,
   if (nullptr == nvdsanalytics_src_pad) {
     return ERR_ADD_ANALYTICS_SRC_PAD;
   }
-  gst_pad_add_probe (nvdsanalytics_src_pad, GST_PAD_PROBE_TYPE_BUFFER,
-    ::metadata::nvdsanalyticsSrcPadBufferProbe, (gpointer)fpsSink, NULL);
-  gst_object_unref (nvdsanalytics_src_pad);
 
   try {
-    mProducer.emplace(mKafkaInfo.mEndpoint, mKafkaInfo.mTopic, kafkaCall);
+    mProducer = std::make_shared<::kafkaproducer::KafkaProducer>(mKafkaInfo.mEndpoint, mKafkaInfo.mTopic, kafkaCall);
   } catch (const std::exception &ex) {
-    std::cerr << "Unable to create kafka producer: " << ex.what() << std::endl;
+    //std::cerr << "Unable to create kafka producer: " << ex.what() << std::endl;
     return ERR_INITIALIZE_PRODUCER;
   }
-
+  ::metadata::producer = mProducer;
+  gst_pad_add_probe (nvdsanalytics_src_pad, GST_PAD_PROBE_TYPE_BUFFER,
+    ::metadata::nvdsanalyticsSrcPadBufferProbe, reinterpret_cast<gpointer>(fpsSink), NULL);
+  gst_object_unref (nvdsanalytics_src_pad);
+  
   return ERR_SUCCESS;
 }
 

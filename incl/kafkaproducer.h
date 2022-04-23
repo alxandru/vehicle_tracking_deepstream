@@ -9,6 +9,8 @@
 #include <memory>
 #include <cstdint>
 #include <functional>
+#include <thread>
+#include <atomic>
 
 namespace kafkaproducer {
 
@@ -30,7 +32,7 @@ class KafkaProducer final {
   explicit KafkaProducer(const std::string &, const std::string &, const kafkacb_t &);
   KafkaProducer(const KafkaProducer &) = default;
   KafkaProducer(KafkaProducer &&) = default;
-  ~KafkaProducer() = default;
+  ~KafkaProducer();
 
   bool produce(const std::string &) const;
 
@@ -52,6 +54,9 @@ class KafkaProducer final {
    private:
     kafkacb_t mKafkaCb;
   } mEventCb;
+
+  std::thread mThread;
+  std::atomic<bool> mEndPooling;
 };
 
 } // namespace kafkaproducer

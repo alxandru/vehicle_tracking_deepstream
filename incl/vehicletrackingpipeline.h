@@ -4,7 +4,6 @@
 #include <glib.h>
 #include <gst/gst.h>
 #include <cstdint>
-#include "experimental/optional"
 #include "kafkaproducer.h"
 #include "types.h"
 
@@ -60,7 +59,7 @@ class VehicleTrackingPipeline final {
   bus_id_t mBusWatchId;
   bool mCleanup;
   ::kafkaproducer::kafka_info_t mKafkaInfo;
-  std::experimental::optional<::kafkaproducer::KafkaProducer> mProducer;
+  producer_t mProducer;
   arg_var_t mArgv;
 };
 

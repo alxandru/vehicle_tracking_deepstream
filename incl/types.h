@@ -8,22 +8,13 @@
 #include <map>
 #include <array>
 #include <unordered_map>
+#include <memory>
+#include "kafkaproducer.h"
 
 namespace {
 constexpr auto N = 5;
 } // namespace
 
-namespace vehicletracking {
-
-using arg_count_t = int;
-using arg_var_t = char **;
-using bus_id_t = guint;
-using loop_t = GMainLoop *;
-using pipeline_t = GstElement *;
-
-using buscb_t = gboolean(*)(GstBus *, GstMessage *, gpointer);
-
-} // namespace vehicletracking
 
 namespace kafkaproducer {
 
@@ -39,7 +30,21 @@ struct KafkaInfo {
   std::string mTopic;
 };
 using kafka_info_t = struct KafkaInfo;
-}
+} // namespace kafkaproducer
+
+namespace vehicletracking {
+
+using arg_count_t = int;
+using arg_var_t = char **;
+using bus_id_t = guint;
+using loop_t = GMainLoop *;
+using pipeline_t = GstElement *;
+
+using buscb_t = gboolean(*)(GstBus *, GstMessage *, gpointer);
+
+using producer_t = std::shared_ptr<::kafkaproducer::KafkaProducer>;
+
+} // namespace vehicletracking
 
 namespace metadata {
 
@@ -54,6 +59,8 @@ using crossing_t = std::array<std::uint16_t, N>;
 using crossings_t = std::array<crossing_t, N>;
 
 using object_entry_t = std::unordered_map<std::uint64_t, std::size_t>;
+
+using meta_producer_t = std::weak_ptr<::kafkaproducer::KafkaProducer>;
 
 } // namespace metadata
 

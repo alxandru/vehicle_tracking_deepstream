@@ -51,12 +51,17 @@ void kafka_call(RdKafka::Event &event) {
     }
     case RdKafka::Event::EVENT_STATS:
     {
-      std::cerr << "\"STATS\": " << event.str() << std::endl;
+      std::cout << "\"STATS\": " << event.str() << std::endl;
+      break;
+    }
+    case RdKafka::Event::EVENT_LOG:
+    {
+      std::cout << "\"LOG\": " << event.str() << std::endl;
       break;
     }
     default:
     {
-      std::cerr << "EVENT " << event.type() << " ("
+      std::cout << "EVENT " << event.type() << " ("
                 << RdKafka::err2str(event.err()) << "): " << event.str()
                 << std::endl;
       break;
@@ -64,7 +69,7 @@ void kafka_call(RdKafka::Event &event) {
   }
 }
 
-constexpr auto KAFKA_ENDPOINT = "localhost:9092";
+constexpr auto KAFKA_ENDPOINT = "192.168.50.10:9092";
 constexpr auto KAFKA_TOPIC = "vehicletraffic";
 
 } // namespace

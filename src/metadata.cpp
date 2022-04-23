@@ -2,11 +2,15 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include <utility>
+#include <memory>
+#include <iomanip>
 #include "metadata.h"
 #include "gstnvdsmeta.h"
 #include "nvds_analytics_meta.h"
 #include "nvdsmeta.h"
 #include "types.h"
+#include "vehicletrackingpipeline.h"
 
 namespace {
 
@@ -138,6 +142,8 @@ std::string getLCFromIdx(const std::size_t idx) {
 
 namespace metadata {
 
+meta_producer_t producer;
+
 GstPadProbeReturn
 nvdsanalyticsSrcPadBufferProbe (GstPad * pad, GstPadProbeInfo * info, gpointer u_data)
 {
@@ -148,8 +154,8 @@ nvdsanalyticsSrcPadBufferProbe (GstPad * pad, GstPadProbeInfo * info, gpointer u
   guint car_count = 0;
   NvDsMetaList * l_frame = nullptr;
   NvDsMetaList * l_obj = nullptr;
-
   gchar *fpsMsg = nullptr;
+  
   g_object_get (G_OBJECT (u_data), "last-message", &fpsMsg, NULL);
 
   NvDsBatchMeta *batch_meta = gst_buffer_get_nvds_batch_meta (buf);
@@ -183,6 +189,18 @@ nvdsanalyticsSrcPadBufferProbe (GstPad * pad, GstPadProbeInfo * info, gpointer u
                 auto exit = getLCIdxFromString(user_meta_data->lcStatus[0]);
                 crossings[entry->second][exit]+=1;
                 std::cout << "Obj " << obj_meta->object_id << " exited" << std::endl;
+                std::stringstream kMsg;
+                kMsg << "{\"entry\":" << std::quoted(getLCFromIdx(entry->second));
+                kMsg << ", \"exit\":" << std::quoted(user_meta_data->lcStatus[0]);
+                kMsg << ", \"obj_id\":" << obj_meta->object_id;
+                kMsg << "}";
+                if (::vehicletracking::producer_t sharedProducer = ::metadata::producer.lock()) {
+                  //std::cout << "producer sending message: " << kMsg.str() << std::endl;
+                  sharedProducer->produce(kMsg.str());
+                }
+                // else {
+                //   std::cout << "producer expired" << std::endl;
+                // }
               } else {
                 objEntries.insert({obj_meta->object_id, getLCIdxFromString(user_meta_data->lcStatus[0])});
               }

@@ -37,7 +37,7 @@ CFLAGS+= $(shell pkg-config --cflags $(PKGS))
 
 LIBS:= $(shell pkg-config --libs $(PKGS))
 
-LIBS+= -L/usr/local/cuda-$(CUDA_VER)/lib64/ -lcudart -lstdc++fs\
+LIBS+= -L/usr/local/cuda-$(CUDA_VER)/lib64/ -lcudart -lstdc++fs -pthread\
 		-L$(LIB_INSTALL_DIR) -lnvdsgst_meta -lnvds_meta -lrdkafka++ -lrdkafka \
 		-Wl,-rpath,$(LIB_INSTALL_DIR)
 
