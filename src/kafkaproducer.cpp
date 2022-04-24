@@ -13,7 +13,6 @@ KafkaProducer::KafkaProducer(const std::string &endpoint, const std::string &top
   mEventCb{msgCb},
   mEndPooling{false}
 {
-  std::cout << "EALCHIR PRODUCER CONSTRUCTOR " << mEndpoint << std::endl;
   RdKafka::Conf* config = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
   if (nullptr == config) {
     throw std::invalid_argument(ERR_MSG_INITIALIZE_CONFIG);
@@ -28,7 +27,6 @@ KafkaProducer::KafkaProducer(const std::string &endpoint, const std::string &top
   mProducer.reset(RdKafka::Producer::create(config, err));
   delete config;
   if (nullptr == mProducer.get()) {
-    std::cout << "EALCHIR PRODUCER NOT CREATED" << std::endl;
     throw std::invalid_argument(std::string(ERR_MSG_INITIALIZE_PRODUCER) + ": " + err);
   }
   mThread = std::thread([this]() {
@@ -37,7 +35,6 @@ KafkaProducer::KafkaProducer(const std::string &endpoint, const std::string &top
     }
   });
   this->createTopic(mTopic, [](const std::uint8_t retCode, const std::string& errstr) {
-    std::cout << "EALCHIR CREATE TOPIC EXIT WITH ERR " << errstr << std::endl;
     if (ERR_SUCCESS != retCode && ERR_TOPIC_ALREADY_EXISTS != retCode) {
       throw std::invalid_argument(errstr);
     }
@@ -63,7 +60,6 @@ void KafkaProducer::createTopic(const std::string &topicName, const topiccb_t &c
   std::string errstr;
   RdKafka::Topic *topic =
       RdKafka::Topic::create(mProducer.get(), topicName, NULL, errstr);
-  std::cout << "EALCHIR createTopic exited with " << rd_kafka_last_error() << std::endl;
   if (nullptr == topic) {
     if(RD_KAFKA_RESP_ERR_TOPIC_ALREADY_EXISTS ==
        rd_kafka_last_error()) {
