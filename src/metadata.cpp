@@ -190,10 +190,11 @@ nvdsanalyticsSrcPadBufferProbe (GstPad * pad, GstPadProbeInfo * info, gpointer u
                 crossings[entry->second][exit]+=1;
                 std::cout << "Obj " << obj_meta->object_id << " exited" << std::endl;
                 std::stringstream kMsg;
+                kMsg << "{\"event\":";
                 kMsg << "{\"entry\":" << std::quoted(getLCFromIdx(entry->second));
                 kMsg << ", \"exit\":" << std::quoted(user_meta_data->lcStatus[0]);
-                kMsg << ", \"obj_id\":" << obj_meta->object_id;
-                kMsg << "}";
+                kMsg << ", \"id\":" << obj_meta->object_id;
+                kMsg << "}}";
                 if (::vehicletracking::producer_t sharedProducer = ::metadata::producer.lock()) {
                   //std::cout << "producer sending message: " << kMsg.str() << std::endl;
                   sharedProducer->produce(kMsg.str());
