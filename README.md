@@ -4,23 +4,24 @@ This application detects and tracks vehicles in a roundabout from a fixed camera
 
 For detection the application uses a [custom trained Yolov4-Tiny network](https://github.com/alxandru/yolov4_roundabout_traffic) based on [RoundaboutTraffic](https://github.com/alxandru/yolov4_roundabout_traffic/tree/main/data) dataset. [DeepStream-Yolo](https://github.com/marcoslucianops/DeepStream-Yolo) was used to improve inference performance.
 
-For tracking the [NvDCF](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvtracker.html#nvdcf-tracker) tracker as well as the [DeepSORT](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvtracker.html#deepsort-tracker-alpha) tracker were tested and used in the application.
+For tracking the [Discriminative Correlation Filter](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvtracker.html#nvdcf-tracker) tracker as well as the [DeepSORT](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvtracker.html#deepsort-tracker-alpha) tracker were tested and used.
 
 A Kafka producer based on [librdkafka](https://github.com/edenhill/librdkafka) library was implemented to send information about the tracked vehicles to the message bus.
 
 
 ## Table of contents
----
+
 * [Requirements](#requirements)
 * [Installation](#install)
 * [Configuration](#config)
 * [Usage](#usage)
+* [Discussion](#discussion)
 
 
 <a name="requirements"></a>
 
 ## Requirements
----
+
 * [Nvidia Jetson Nano](https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit) (not mandatory)
 * [JetPack 4.6](https://developer.nvidia.com/embedded/jetpack)
 * [NVIDIA DeepStream SDK 6.0](https://developer.nvidia.com/deepstream-sdk)
@@ -29,7 +30,7 @@ A Kafka producer based on [librdkafka](https://github.com/edenhill/librdkafka) l
 <a name="install"></a>
 
 ## Installation
----
+
 
 Once we have all the requirements installed we download the repo and the third parties:
 
@@ -71,7 +72,7 @@ $ CUDA_VER=10.2 make
 <a name="config"></a>
 
 ## Configuration
----
+
 
 The application uses a yolov4-tiny custom model for vehicle detection and mars-small128 model for DeepSORT tracking algorithm.
 Both models will be downloaded by running the following script:
@@ -83,7 +84,30 @@ $ bash models/get_models.sh
 <a name="usage"></a>
 
 ## Usage
----
 
-For testing purposes we download and use this [video](https://drive.google.com/file/d/1GnGOLN_1nlq1-yttD_uk_zJzgfr6vt8Q/view?usp=sharing).
+The application takes as input a video in h264 format and outputs a mp4 video with the annotations:
 
+```bash
+$ ./bin/vehicle-tracking-deepstream test002.h264 output.mp4
+```
+
+For testing purposes you can download this [video](https://drive.google.com/file/d/1GnGOLN_1nlq1-yttD_uk_zJzgfr6vt8Q/view?usp=sharing) and use it as input for the app.
+
+For tracking, the DeepStream discriminative correlation filter (DCF) is used but it can be changed to DeepSORT tracker by modifying the `cfg/tracker_config.txt` file. Just uncomment the `ll-config-file` line for DeepSORT and comment it for NvDCF tracker:
+
+```bash
+#ll-config-file=config_tracker_NvDCF_perf.yml
+ll-config-file=config_tracker_DeepSORT.yml
+```
+
+Here is a video snippet with the NvDCF tracker (click on image to open the Youtube video):
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/7yzgS53jE74/hqdefault.jpg)](https://www.youtube.com/watch?v=7yzgS53jE74)
+
+And the same video but with DeepSORT tracker activated:
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/dRvLdxYPX1k/hqdefault.jpg)](https://www.youtube.com/watch?v=dRvLdxYPX1k)
+
+<a name="discussion"></a>
+
+## Discussion
