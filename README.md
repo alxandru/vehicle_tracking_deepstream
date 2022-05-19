@@ -1,5 +1,7 @@
 # Vehicle Detection and Tracking with Yolov4 and DeepStream SDK
 
+![Alt Text](https://media.giphy.com/media/B45c0SelzSWaY6OgnY/giphy.gif)
+
 This application detects and tracks vehicles in a roundabout from a fixed camera stream using [Nvidia DeepStream SDK](https://developer.nvidia.com/deepstream-sdk) and sends information about the entries and the exits along with the vehicle ids to a Kafka Message Bus in order for a client application to process the data.
 
 For detection the application uses a [custom trained Yolov4-Tiny network](https://github.com/alxandru/yolov4_roundabout_traffic) based on [RoundaboutTraffic](https://github.com/alxandru/yolov4_roundabout_traffic/tree/main/data) dataset. [DeepStream-Yolo](https://github.com/marcoslucianops/DeepStream-Yolo) was used to improve inference performance.
@@ -111,3 +113,12 @@ And the same video but with DeepSORT tracker activated:
 <a name="discussion"></a>
 
 ## Discussion
+
+
+The main issues for the trackers in this fixed camera scenario are the occlusions and the changes in angle of the vehicles.
+The NvDCF tracker suffers more from the occlusion problem. On the other hand the DeepSORT tracker handles the changes in vehicle angles worse.
+Nevertheless, in general, the two tracking algorithms perform similarly. At the end of the day almost the same number of vehicles are lost due to re-identification.
+
+The DeepSORT algorithm uses mars-small128 model which originally was trained for recognizing humans. As a next step, it would be interesting to train a model for recognizing cars for DeepSORT tracker and check how much it would improve.
+
+In terms of number of frames processed per second (FPS) there is no big difference between the two trackers. With DeepSORT the application processes around 14 FPS on average, whereas with NvDCF processes around 13 FPS.
