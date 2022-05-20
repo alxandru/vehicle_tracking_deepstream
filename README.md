@@ -2,7 +2,7 @@
 
 ![Alt Text](https://media.giphy.com/media/B45c0SelzSWaY6OgnY/giphy.gif)
 
-This application detects and tracks vehicles in a roundabout from a fixed camera stream using [Nvidia DeepStream SDK](https://developer.nvidia.com/deepstream-sdk) and sends information about the entries and the exits along with the vehicle ids to a Kafka Message Bus in order for a client application to process the data.
+This application runs on Jetson Nano and detects and tracks vehicles in a roundabout from a fixed camera stream using [Nvidia DeepStream SDK](https://developer.nvidia.com/deepstream-sdk) and sends information about the entries and the exits along with the vehicle ids to a Kafka Message Bus in order for a client application to process the data.
 
 For detection the application uses a [custom trained Yolov4-Tiny network](https://github.com/alxandru/yolov4_roundabout_traffic) based on [RoundaboutTraffic](https://github.com/alxandru/yolov4_roundabout_traffic/tree/main/data) dataset. [DeepStream-Yolo](https://github.com/marcoslucianops/DeepStream-Yolo) was used to improve inference performance.
 
@@ -75,13 +75,18 @@ $ CUDA_VER=10.2 make
 
 ## Configuration
 
-
+### 1. Models
 The application uses a yolov4-tiny custom model for vehicle detection and mars-small128 model for DeepSORT tracking algorithm.
 Both models will be downloaded by running the following script:
 
 ```bash
 $ bash models/get_models.sh
 ```
+
+### 2. Kafka
+Open the `cfg/kafka_config.txt ` file and change the `endpoint` to reflect where your Kafka message bus is installed. The `topic` field may be left as it is.
+
+If you don't already have a kafka message bus running you can check this simple deployment: [zk-single-kafka-single.yml](https://github.com/conduktor/kafka-stack-docker-compose/blob/master/zk-single-kafka-single.yml). You need to have `docker` and `docker-compose` installed on your machine.
 
 <a name="usage"></a>
 
