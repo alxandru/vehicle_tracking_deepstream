@@ -5,6 +5,7 @@
 
 #include <librdkafka/rdkafkacpp.h>
 
+#include "kafkaparser.h"
 #include "vehicletrackingpipeline.h"
 
 namespace {
@@ -69,9 +70,6 @@ void kafka_call(RdKafka::Event &event) {
   }
 }
 
-constexpr auto KAFKA_ENDPOINT = "192.168.50.10:9092";
-constexpr auto KAFKA_TOPIC = "vehicletraffic";
-
 } // namespace
 
 int main(int argc, char *argv[])
@@ -81,8 +79,13 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  vehicletracking::VehicleTrackingPipeline vtp{argc,
-    argv, kafkaproducer::KafkaInfo{KAFKA_ENDPOINT, KAFKA_TOPIC}};
+  kafkaproducer::kafka_info_t kafkaInfo;
+  if (!kafkaparser::setKafkaProperties(kafkaInfo)) {
+    std::cerr << "Unable to set kafka properties" << std::endl;
+    return -1;
+  }
+
+  vehicletracking::VehicleTrackingPipeline vtp{argc, argv, kafkaInfo};
   auto ret = vtp.initialize(bus_call, kafka_call);
   if (vehicletracking::ERR_SUCCESS != ret) {
     std::cerr << "Unable to initialize vehicle tracking pipeline. Returned error code: " << ret << std::endl;

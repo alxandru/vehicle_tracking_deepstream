@@ -19,7 +19,7 @@ constexpr auto N = 5;
 namespace kafkaproducer {
 
 struct KafkaInfo {
-  KafkaInfo() = delete;
+  KafkaInfo() = default;
   explicit KafkaInfo(const std::string &endpoint, const std::string &topic):
     mEndpoint{endpoint},
     mTopic{topic} {}
